@@ -1,0 +1,3 @@
+C:/Users/miql/CLionProjects/PIAA2/cmake-build-debug/CMakeFiles/PIAA2.dir
+C:/Users/miql/CLionProjects/PIAA2/cmake-build-debug/CMakeFiles/edit_cache.dir
+C:/Users/miql/CLionProjects/PIAA2/cmake-build-debug/CMakeFiles/rebuild_cache.dir
