@@ -3,6 +3,7 @@
 #include <string>
 #include <fstream>
 #include <algorithm>
+#include <valarray>
 
 using namespace std;
 
@@ -107,6 +108,7 @@ void quicksort(vector<int>& data, int leftIndex, int rightIndex) {
         int pivot = partition(data, leftIndex, rightIndex);
         quicksort(data, leftIndex, pivot - 1);
         quicksort(data, pivot + 1, rightIndex);
+
     }
 }
 
@@ -166,6 +168,32 @@ void mergeSort(vector<int>& data, int const leftIndex, int const rightIndex){
     mergeSortedArrays(data, leftIndex, middleIndex, rightIndex);
 }
 
+//bucket sort
+
+void bucketSort(vector<int>& data) {
+    // buckets from range of 0 to 11
+    int bucketsNumber = 11;
+    vector<vector<int>> buckets(bucketsNumber);
+
+    // assign elements to buckets
+    for (int i : data) {
+        int bucketIndex = i / bucketsNumber;
+        buckets[bucketIndex].push_back(i);
+    }
+
+    // sort elements in each bucket
+    for (vector<int>& bucket : buckets) {
+        quicksort(bucket, 0, bucket.size() - 1);
+    }
+
+    // merge buckets
+    int index = 0;
+    for(vector<int>& bucket : buckets){
+        for(int i : bucket){
+            data[index++] = i;
+        }
+    }
+}
 
 
 int main() {
@@ -192,8 +220,9 @@ int main() {
 
     //quicksort(dane_100k,0,dane_100k.size()-1);
     //quicksort(test,0,test.size()-1);
-    mergeSort(test,0,test.size()-1);
-    mergeSort(dane_100k,0,dane_100k.size()-1);
+    //mergeSort(test,0,test.size()-1);
+    //mergeSort(dane_100k,0,dane_100k.size()-1);
+    bucketSort(test);
 
     cout<<"--------------PO SORTOWANIU-------------- "<<endl;
     showData(test);
