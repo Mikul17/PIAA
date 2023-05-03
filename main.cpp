@@ -2,13 +2,16 @@
 #include <vector>
 #include <string>
 #include <fstream>
-#include <algorithm>
-#include <valarray>
+#include <chrono>
+#include <stack>
 
 using namespace std;
 
+int amountOfData = 0;
 
 //Reading and saving data to files
+
+//saving incorrect values to txt file
 void saveIncorrectToTxt(const vector<string>& incorrectValues){
     ofstream file;
     file.open ("incorrect.txt");
@@ -18,6 +21,7 @@ void saveIncorrectToTxt(const vector<string>& incorrectValues){
     file.close();
 }
 
+//function for reading specific amount of data from file
 vector<int> readData(int amount) {
     ifstream file("../projekt2_dane.csv");
     vector<int> data;
@@ -38,7 +42,7 @@ vector<int> readData(int amount) {
     return data;
 }
 
-//overloaded function for reading all data
+//overloaded function for reading all data from file
 vector<int> readData() {
     ifstream file("../projekt2_dane.csv");
     vector<int> data;
@@ -81,34 +85,109 @@ void showData(const vector<int>& data){
     cout<<endl;
 }
 
-void swap(int& a, int& b){
-    int temp = a;
-    a = b;
-    b = temp;
+void swapElement(vector<int>& data, int index1, int index2){
+    int temp = data[index1];
+    data[index1] = data[index2];
+    data[index2] = temp;
+}
+
+bool saveTestingResultToTxt(chrono::duration<double> duration, const string& sortingAlgorithmName, const vector<int>& data){
+    ofstream file;
+    file.open ("testingResaults.txt", ios_base::app);
+    if(!file.is_open()){
+        return false;
+    }
+    file<<"----------------------------------"<<endl;
+    file<<"Amount of data: "<<data.size()<<endl;
+    file<<"Time: "<<duration.count()<<endl;
+    file<<"Sorting algorithm used: "<<sortingAlgorithmName<<endl;
+    file<<"Sorted correctly: "<<checkIfSortedCorrectly(data)<<endl;
+    file<<endl;
+    file<<"----------------------------------"<<endl;
+    file.close();
+    return true;
+}
+
+void checkSortingAlgorithm(const vector<int>& data, string algorithmName, void (*sortingAlgorithm)(vector<int>&, int, int)){
+    if(data.empty()){
+        cout<<"Data is empty"<<endl;
+        return;
+    }
+    vector<int> dataCopy = data;
+    auto start = std::chrono::high_resolution_clock::now();
+    sortingAlgorithm(dataCopy, 0, dataCopy.size()-1);
+    auto stop = std::chrono::high_resolution_clock::now();
+    auto duration =std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
+    if(data.size() < 100){
+        cout<<"Before sorting: "<<endl;
+        showData(data);
+        cout<<"After sorting: "<<endl;
+        showData(dataCopy);
+    }
+    if(saveTestingResultToTxt(duration, algorithmName, dataCopy)) {
+        cout << "Testing result saved to file" << endl;
+    }else{
+        cout<<"Error while saving testing result to file"<<endl;
+    }
+    cout<<"Time: "<<duration.count()<<endl;
 }
 
 
+//Sorting algorithms
+
 //Quicksort
+
 int partition(vector<int>& data, int leftIndex, int rightIndex) {
     int pivot = data[rightIndex];
     int i = leftIndex - 1;
     for (int j = leftIndex; j <= rightIndex - 1; j++) {
         if (data[j] < pivot) {
             i++;
-            swap(data[i], data[j]);
+            swapElement(data, i, j);
         }
     }
-    swap(data[i + 1], data[rightIndex]);
+    swapElement(data, i + 1, rightIndex);
     return i + 1;
 }
 
-
 void quicksort(vector<int>& data, int leftIndex, int rightIndex) {
     if (leftIndex < rightIndex) {
+        amountOfData++;
+        if(amountOfData%1000 == 0){
+            cout<<"Amount of data sorted: "<<amountOfData<<endl;
+        }
         int pivot = partition(data, leftIndex, rightIndex);
         quicksort(data, leftIndex, pivot - 1);
         quicksort(data, pivot + 1, rightIndex);
+    }
+}
 
+void iterativeQuicksort(vector<int>& data, int leftIndex, int rightIndex) {
+    stack<int> stack;
+
+    // Push the initial indices onto the stack
+    stack.push(leftIndex);
+    stack.push(rightIndex);
+
+    while (!stack.empty()) {
+        // Pop the indices from the stack
+        int end = stack.top(); stack.pop();
+        int start = stack.top(); stack.pop();
+
+        // Partition the array and get the pivot index
+        int pivot = partition(data, start, end);
+
+        // If there are elements on the left side of the pivot, push their indices onto the stack
+        if (pivot - 1 > start) {
+            stack.push(start);
+            stack.push(pivot - 1);
+        }
+
+        // If there are elements on the right side of the pivot, push their indices onto the stack
+        if (pivot + 1 < end) {
+            stack.push(pivot + 1);
+            stack.push(end);
+        }
     }
 }
 
@@ -170,7 +249,7 @@ void mergeSort(vector<int>& data, int const leftIndex, int const rightIndex){
 
 //bucket sort
 
-void bucketSort(vector<int>& data) {
+void bucketSort(vector<int>& data, int a, int b) {
     // buckets from range of 0 to 11
     int bucketsNumber = 11;
     vector<vector<int>> buckets(bucketsNumber);
@@ -183,7 +262,7 @@ void bucketSort(vector<int>& data) {
 
     // sort elements in each bucket
     for (vector<int>& bucket : buckets) {
-        quicksort(bucket, 0, bucket.size() - 1);
+        mergeSort(bucket, 0, bucket.size() - 1);
     }
 
     // merge buckets
@@ -195,40 +274,22 @@ void bucketSort(vector<int>& data) {
     }
 }
 
+//check sorting algorithm
 
+
+#pragma comment(linker, "/STACK:8000000")
 int main() {
     vector<int> test = readData(10);
     vector<int> dane_10k = readData(10000);
     vector<int> dane_100k = readData(100000);
     vector<int> dane_500k = readData(500000);
+    vector<int> tescik = readData(300000);
     vector<int> dane_1m = readData(1000000);
-    vector<int> dane_max = readData();
+    vector<vector<int>> database = {test, dane_10k, dane_100k, dane_500k, dane_1m};
 
-    cout << "Wczytano dane" << endl;
-    cout<<"Dane 10k: "<<dane_10k.size()<<endl;
-    cout<<"Dane 100k: "<<dane_100k.size()<<endl;
-    cout<<"Dane 500k: "<<dane_500k.size()<<endl;
-    cout<<"Dane 1m: "<<dane_1m.size()<<endl;
-    cout<<"Dane max: "<<dane_max.size()<<endl;
-
-    cout<<"--------------PRZED SORTOWANIEM-------------- "<<endl;
-    showData(test);
-
-    cout<<"Czy posortowana [test]: "<<checkIfSortedCorrectly(test)<<endl;
-    cout<<"Czy posortowana [100k]: "<<checkIfSortedCorrectly(dane_100k)<<endl;
-
-
-    //quicksort(dane_100k,0,dane_100k.size()-1);
-    //quicksort(test,0,test.size()-1);
-    //mergeSort(test,0,test.size()-1);
-    //mergeSort(dane_100k,0,dane_100k.size()-1);
-    bucketSort(test);
-
-    cout<<"--------------PO SORTOWANIU-------------- "<<endl;
-    showData(test);
-
-    cout<<"Czy posortowana [test]: "<<checkIfSortedCorrectly(test)<<endl;
-    cout<<"Czy posortowana [100k]: "<<checkIfSortedCorrectly(dane_100k)<<endl;
-
+    //checkSortingAlgorithm(test, "quickSort", quicksort);
+    //checkSortingAlgorithm(dane_10k, "iterativeQuickSort", quicksort);
+    //checkSortingAlgorithm(dane_100k, "mergeSort", quicksort);
+    checkSortingAlgorithm(tescik, "bucketSort", quicksort);
 }
 
